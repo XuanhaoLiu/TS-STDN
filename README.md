@@ -1,4 +1,4 @@
-# TS-STDN: A Network for Robust End-to-end EEG-based Emotion Recognition (ICONIP 2023)
+# TS-STDN (ICONIP 2023)
 
 ![TS-STDN model](TS-STDNmodel.png)
 
