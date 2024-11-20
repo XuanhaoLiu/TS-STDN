@@ -26,9 +26,7 @@ Example code for training TS-STDN:
 import torch
 import torch.nn.functional as F
 from models import TS_STDN
-from functools import partial
 from sklearn.metrics import accuracy_score
-import math
 
 def torch_stft(self, X_train):
     signal = []
@@ -54,11 +52,14 @@ def train(optimizer, train_dataloader, local_rank, epochs):
         loss_all = 0
         preds = []
         labels = []
-        for eeg, label in train_dataloader:
+        
+        # eeg: clean EEG, bad_eeg: EEG contaminated by noise, label: class label
+        for eeg, bad_eeg, label in train_dataloader:
             label = label.to(local_rank, non_blocking=True)
             eeg = eeg.to(local_rank, non_blocking=True)
+            bad_eeg = bad_eeg.to(local_rank, non_blocking=True)
             eeg_s = torch_stft(eeg.reshape(eeg.shape[0], eeg.shape[2], eeg.shape[3]))
-            y, recons_t, recons_s = model(eeg)
+            y, recons_t, recons_s = model(bad_eeg)
             loss_ce = F.cross_entropy(input=y, target=label.long())
             loss_recon = F.mse_loss(recons_t, eeg) + F.mse_loss(recons_s, eeg_s)
             loss = loss_ce + loss_recon
@@ -69,6 +70,7 @@ def train(optimizer, train_dataloader, local_rank, epochs):
             optimizer.step()
             preds.append(torch.argmax(y, dim=-1).cpu())
             labels.append(label.cpu())
+
         pred = torch.cat(preds, dim=0)
         label = torch.cat(labels, dim=0)
         train_accuracy = accuracy_score(label, pred)
