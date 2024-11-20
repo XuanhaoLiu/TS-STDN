@@ -8,6 +8,72 @@ This is the official repository of our paper for ICONIP 23: [Two-Stream Spectral
 
 The source code of the TS-STDN model and producing noisy data.
 
+## Example
+Example code for the use of TS-STDN:
+```python
+import torch
+from torch import nn
+
+model = TS_STDN(classes_num=3, C=62, T=400, D=4, d=16, Fs=16, Ft=16)
+x = torch.rand(size=(1, 1, 62, 400))
+print(x.shape)
+y, recons_t, recons_s = model(x)
+print(y.shape, recons_t.shape, recons_s.shape)
+```
+
+Example code for training TS-STDN:
+```python
+import torch
+import torch.nn.functional as F
+from models import TS_STDN
+from functools import partial
+from sklearn.metrics import accuracy_score
+import math
+
+def torch_stft(self, X_train):
+    signal = []
+    # index = np.arange(X_train.shape[1])
+    # np.random.shuffle(index)
+    for s in range(X_train.shape[1]):
+        spectral = torch.stft(X_train[:, s, :],
+            n_fft = 200,
+            hop_length = 200,
+            center = False,
+            onesided = True)
+        signal.append(spectral)
+    
+    signal1 = torch.stack(signal)[:, :, :, :, 0].permute(1, 0, 2, 3)
+    signal2 = torch.stack(signal)[:, :, :, :, 1].permute(1, 0, 2, 3)
+
+    return torch.cat([torch.log(torch.abs(signal1) + 1e-8), torch.log(torch.abs(signal2) + 1e-8)], dim=2)
+
+def train(optimizer, train_dataloader, local_rank, epochs):
+    model = TS_STDN(classes_num=3, C=62, T=400, D=4, d=16, Fs=16, Ft=16)
+    for epoch in range(epochs):
+        model.train()
+        loss_all = 0
+        preds = []
+        labels = []
+        for eeg, label in train_dataloader:
+            label = label.to(local_rank, non_blocking=True)
+            eeg = eeg.to(local_rank, non_blocking=True)
+            eeg_s = torch_stft(eeg.reshape(eeg.shape[0], eeg.shape[2], eeg.shape[3]))
+            y, recons_t, recons_s = model(eeg)
+            loss_ce = F.cross_entropy(input=y, target=label.long())
+            loss_recon = F.mse_loss(recons_t, eeg) + F.mse_loss(recons_s, eeg_s)
+            loss = loss_ce + loss_recon
+            loss_all += loss.item()
+            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            preds.append(torch.argmax(y, dim=-1).cpu())
+            labels.append(label.cpu())
+        pred = torch.cat(preds, dim=0)
+        label = torch.cat(labels, dim=0)
+        train_accuracy = accuracy_score(label, pred)
+```
+
 ## Citation
 If you find our paper/code/dataset useful, please consider citing our work:
 ```
