@@ -77,10 +77,10 @@ def train(optimizer, train_dataloader, local_rank, epochs):
 ```
 
 ## Citation
-If you find our paper/code/dataset useful, please consider citing our work:
+If you find our paper/code useful, please consider citing our work:
 ```
 @inproceedings{liu2023two,
-  title={Two-Stream Spectral-Temporal Denoising Network for End-to-End Robust EEG-Based Emotion Recognition},
+  title={{Two-Stream Spectral-Temporal Denoising Network for End-to-End Robust EEG-Based Emotion Recognition}},
   author={Liu, Xuan-Hao and Jiang, Wei-Bang and Zheng, Wei-Long and Lu, Bao-Liang},
   booktitle={International Conference on Neural Information Processing},
   pages={186--197},
